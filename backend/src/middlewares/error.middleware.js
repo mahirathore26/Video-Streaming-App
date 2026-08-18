@@ -9,7 +9,7 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // Safely clean up any leftover local Multer files asynchronously.
-  // We ignore errors (e.g. file doesn't exist) to keep cleanup robust.
+ 
   try {
     if (req.file && req.file.path) {
       fs.promises.unlink(req.file.path).catch(() => {});

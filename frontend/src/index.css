@@ -1,0 +1,240 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+:root {
+  --odyssey-bg: #F4F0E6;
+  --odyssey-canvas: #F4F0E6;
+  --odyssey-surface: #FAF8F2;
+  --odyssey-surface-elevated: #FAF8F2;
+  --odyssey-surface-hover: #E9E3D5;
+  --odyssey-surface-soft: #E9E3D5;
+
+  --odyssey-border: #D6CCBA;
+  --odyssey-border-subtle: rgba(214, 204, 186, 0.4);
+  --odyssey-border-strong: #C3B49E;
+
+  --odyssey-text: #24211D;
+  --odyssey-text-secondary: #4A463F;
+  --odyssey-text-muted: #6F6A61;
+
+  --odyssey-accent: #7A2635;
+  --odyssey-accent-hover: #641F2C;
+  --odyssey-accent-active: #501923;
+  --odyssey-accent-subtle: rgba(122, 38, 53, 0.08);
+  --odyssey-accent-glow: rgba(122, 38, 53, 0.15);
+  
+  --odyssey-warm: #B08D57;
+  --odyssey-warm-subtle: rgba(176, 141, 87, 0.12);
+
+  --odyssey-focus-ring: rgba(122, 38, 53, 0.35);
+
+  --odyssey-success: #526343;
+  --odyssey-success-bg: rgba(82, 99, 67, 0.12);
+  --odyssey-success-border: rgba(82, 99, 67, 0.25);
+
+  --odyssey-warning: #B08D57;
+  --odyssey-warning-bg: rgba(176, 141, 87, 0.12);
+  --odyssey-warning-border: rgba(176, 141, 87, 0.25);
+
+  --odyssey-danger: #8a3333;
+  --odyssey-danger-bg: rgba(138, 51, 51, 0.12);
+  --odyssey-danger-border: rgba(138, 51, 51, 0.25);
+
+  --odyssey-neutral-bg: #E9E3D5;
+  --odyssey-neutral-border: #D6CCBA;
+
+  --odyssey-font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --odyssey-font-serif: "Playfair Display", Georgia, serif;
+
+  --odyssey-radius-sm: 0.125rem;
+  --odyssey-radius: 0.25rem;
+  --odyssey-radius-lg: 0.375rem;
+  --odyssey-radius-xl: 0.5rem;
+  --odyssey-radius-2xl: 0.5rem;
+  --odyssey-radius-full: 9999px;
+
+  --odyssey-shadow-sm: 0 1px 2px rgba(36, 33, 29, 0.05);
+  --odyssey-shadow: 0 4px 12px rgba(36, 33, 29, 0.08);
+  --odyssey-shadow-lg: 0 12px 32px rgba(36, 33, 29, 0.12);
+}
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--odyssey-font-sans);
+  background: var(--odyssey-bg);
+  color: var(--odyssey-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.55;
+}
+
+#root {
+  isolation: isolate;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--odyssey-border); border-radius: var(--odyssey-radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--odyssey-text-muted); }
+
+:focus-visible {
+  outline: 2px solid var(--odyssey-focus-ring);
+  outline-offset: 2px;
+}
+
+input[type="file"] {
+  color: var(--odyssey-text-muted);
+  font-size: 0.8125rem;
+}
+
+input[type="file"]::file-selector-button {
+  background: var(--odyssey-surface);
+  color: var(--odyssey-text);
+  border: 1px solid var(--odyssey-border);
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--odyssey-radius);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-right: 0.75rem;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+input[type="file"]::file-selector-button:hover {
+  background: var(--odyssey-surface-hover);
+  border-color: var(--odyssey-border-strong);
+}
+
+a, button {
+  transition: color 150ms, background-color 150ms, border-color 150ms, opacity 150ms;
+}
+
+textarea, input, button {
+  font: inherit;
+}
+
+/* ── Typography Classes ── */
+.font-serif {
+  font-family: var(--odyssey-font-serif);
+}
+
+/* ── Utility Classes ── */
+.odyssey-container {
+  width: 100%;
+  max-width: 1240px;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
+
+.odyssey-page {
+  margin-inline: auto;
+  width: min(100%, 82rem);
+}
+
+.odyssey-field {
+  width: 100%;
+  border-radius: var(--odyssey-radius);
+  border: 1px solid var(--odyssey-border);
+  background: var(--odyssey-surface);
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  color: var(--odyssey-text);
+  outline: none;
+  resize: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.odyssey-field::placeholder {
+  color: var(--odyssey-text-muted);
+}
+
+.odyssey-field:hover {
+  border-color: var(--odyssey-border-strong);
+}
+
+.odyssey-field:focus {
+  border-color: var(--odyssey-accent);
+  box-shadow: 0 0 0 2px var(--odyssey-accent-glow);
+}
+
+.odyssey-file-input {
+  display: block;
+  width: 100%;
+  border-radius: var(--odyssey-radius);
+  border: 1px dashed var(--odyssey-border-strong);
+  background: var(--odyssey-surface);
+  padding: 0.85rem 1rem;
+}
+
+.odyssey-rule {
+  height: 1px;
+  width: 100%;
+  background: var(--odyssey-border);
+}
+
+/* ── Timeline utilities ── */
+.odyssey-timeline-spine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--odyssey-border);
+}
+
+.odyssey-timeline-dot {
+  position: absolute;
+  left: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--odyssey-text-muted);
+  border: 1.5px solid var(--odyssey-bg);
+}
+
+.odyssey-timeline-dot--active {
+  background: var(--odyssey-accent);
+}
+
+/* ── Page entry ── */
+@keyframes odyssey-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.odyssey-enter {
+  animation: odyssey-fade-in 0.35s ease-out both;
+}
+
+/* ── Thumbnail hover ── */
+.odyssey-thumb {
+  overflow: hidden;
+  position: relative;
+  background: var(--odyssey-surface-soft);
+  border: 1px solid var(--odyssey-border-subtle);
+}
+
+.odyssey-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 220ms ease, filter 220ms ease;
+}
+
+.group:hover .odyssey-thumb img,
+.odyssey-thumb:hover img {
+  transform: scale(1.02);
+  filter: contrast(1.03);
+}
