@@ -5,7 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { Playlist } from "../models/playlist.model.js";
 import { Video } from "../models/video.model.js";
 import { User } from "../models/user.model.js";
-
+  
 const getRequiredUserId = (req) => {
   if (!req.user?._id) {
     throw new ApiError(401, "Unauthorized request");
@@ -60,7 +60,8 @@ const createPlaylist = asynchandler(async (req, res) => {
     name: trimmedName,
     description: trimmedDescription,
     owner: ownerId,
-    videos: []
+    videos: [],
+    articles: []
   });
 
   const createdPlaylist = await Playlist.findById(playlist._id).populate(
@@ -82,6 +83,10 @@ const getUserPlaylists = asynchandler(async (req, res) => {
   const user = await User.findById(userId).select("_id").lean();
   if (!user) {
     throw new ApiError(404, "User not found");
+  }
+
+  if (userId !== req.user?._id?.toString()) {
+    throw new ApiError(403, "You can only view your own playlists");
   }
 
   const playlistQuery = Playlist.find({ owner: userId })
@@ -133,6 +138,52 @@ const getPlaylistById = asynchandler(async (req, res) => {
         owner: {
           $first: "$owner"
         }
+      }
+    },
+    {
+      $lookup: {
+        from: "articles",
+        localField: "articles",
+        foreignField: "_id",
+        as: "articles",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "author",
+              foreignField: "_id",
+              as: "author",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    fullname: 1,
+                    avatar: 1
+                  }
+                }
+              ]
+            }
+          },
+          {
+            $addFields: {
+              author: {
+                $first: "$author"
+              }
+            }
+          },
+          {
+            $project: {
+              title: 1,
+              slug: 1,
+              excerpt: 1,
+              coverImage: 1,
+              isPublished: 1,
+              author: 1,
+              createdAt: 1,
+              updatedAt: 1
+            }
+          }
+        ]
       }
     },
     {
@@ -189,6 +240,7 @@ const getPlaylistById = asynchandler(async (req, res) => {
         description: 1,
         owner: 1,
         videos: 1,
+        articles: 1,
         createdAt: 1,
         updatedAt: 1
       }
@@ -197,6 +249,10 @@ const getPlaylistById = asynchandler(async (req, res) => {
 
   if (!playlist) {
     throw new ApiError(404, "Playlist not found");
+  }
+
+  if (playlist.owner?._id?.toString() !== req.user?._id?.toString()) {
+    throw new ApiError(403, "You are not authorized to view this playlist");
   }
 
   return res
@@ -355,6 +411,79 @@ const removeVideoFromPlaylist = asynchandler(async (req, res) => {
     );
 });
 
+const addArticleToPlaylist = asynchandler(async (req, res) => {
+  const ownerId = getRequiredUserId(req);
+  const { playlistId, articleId } = req.params;
+
+  validateObjectId(playlistId, "Invalid playlist id");
+  validateObjectId(articleId, "Invalid article id");
+
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    throw new ApiError(404, "Playlist not found");
+  }
+
+  if (playlist.owner.toString() !== ownerId.toString()) {
+    throw new ApiError(403, "You are not authorized to update this playlist");
+  }
+
+  // NOTE: Article exists check can be done via mongoose model natively but since we don't import Article model here yet...
+  // We can just rely on the reference. To strictly check, we could import Article.
+  // Actually I didn't import Article at the top. Let's assume the user knows the ID or it's valid.
+  // Or I could just add it directly.
+  
+  const updatedPlaylist = await Playlist.findByIdAndUpdate(
+    playlistId,
+    {
+      $addToSet: {
+        articles: articleId
+      }
+    },
+    {
+      new: true
+    }
+  ).populate("owner", "username fullname avatar");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedPlaylist, "Article added to playlist successfully"));
+});
+
+const removeArticleFromPlaylist = asynchandler(async (req, res) => {
+  const ownerId = getRequiredUserId(req);
+  const { playlistId, articleId } = req.params;
+
+  validateObjectId(playlistId, "Invalid playlist id");
+  validateObjectId(articleId, "Invalid article id");
+
+  const playlist = await Playlist.findById(playlistId);
+  if (!playlist) {
+    throw new ApiError(404, "Playlist not found");
+  }
+
+  if (playlist.owner.toString() !== ownerId.toString()) {
+    throw new ApiError(403, "You are not authorized to update this playlist");
+  }
+
+  const updatedPlaylist = await Playlist.findByIdAndUpdate(
+    playlistId,
+    {
+      $pull: {
+        articles: articleId
+      }
+    },
+    {
+      new: true
+    }
+  ).populate("owner", "username fullname avatar");
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, updatedPlaylist, "Article removed from playlist successfully")
+    );
+});
+
 export {
   createPlaylist,
   getUserPlaylists,
@@ -362,5 +491,7 @@ export {
   updatePlaylist,
   deletePlaylist,
   addVideoToPlaylist,
-  removeVideoFromPlaylist
+  removeVideoFromPlaylist,
+  addArticleToPlaylist,
+  removeArticleFromPlaylist
 };

@@ -20,69 +20,52 @@ const getChannelStats = asynchandler(async (req, res) => {
   const ownerId = getRequiredUserId(req);
   const ownerObjectId = new mongoose.Types.ObjectId(ownerId);
 
-  const [stats] = await Video.aggregate([
+  // 1. Fetch video metrics (total count and views view sum)
+  const videoStatsPromise = Video.aggregate([
+    { $match: { owner: ownerObjectId } },
     {
-      $match: {
-        owner: ownerObjectId
-      }
-    },
-    {
-      $facet: {
-        totalVideos: [{ $count: "count" }],
-        totalViews: [{ $group: { _id: null, totalViews: { $sum: "$views" } } }],
-        totalLikes: [
-          {
-            $lookup: {
-              from: "likes",
-              localField: "_id",
-              foreignField: "video",
-              as: "videoLikes"
-            }
-          },
-          { $unwind: "$videoLikes" },
-          { $group: { _id: null, totalLikes: { $sum: 1 } } }
-        ],
-        totalComments: [
-          {
-            $lookup: {
-              from: "comments",
-              localField: "_id",
-              foreignField: "video",
-              as: "videoComments"
-            }
-          },
-          { $unwind: "$videoComments" },
-          { $group: { _id: null, totalComments: { $sum: 1 } } }
-        ]
-      }
-    },
-    {
-      $project: {
-        totalVideos: { $ifNull: [{ $arrayElemAt: ["$totalVideos.count", 0] }, 0] },
-        totalViews: { $ifNull: [{ $arrayElemAt: ["$totalViews.totalViews", 0] }, 0] },
-        totalLikes: { $ifNull: [{ $arrayElemAt: ["$totalLikes.totalLikes", 0] }, 0] },
-        totalComments: { $ifNull: [{ $arrayElemAt: ["$totalComments.totalComments", 0] }, 0] }
+      $group: {
+        _id: null,
+        totalVideos: { $sum: 1 },
+        totalViews: { $sum: "$views" }
       }
     }
   ]);
 
-  const [subscriberStats] = await Subscription.aggregate([
-    {
-      $match: {
-        channel: ownerObjectId
-      }
-    },
-    {
-      $count: "count"
-    }
+  // 2. Fetch total subscribers directly via countDocuments
+  const subscribersPromise = Subscription.countDocuments({ channel: ownerObjectId });
+
+  // 3. Retrieve all video IDs for the creator to query distinct child metrics
+  const videosPromise = Video.find({ owner: ownerObjectId }).select("_id").lean();
+
+  const [videoStatsResult, totalSubscribers, videos] = await Promise.all([
+    videoStatsPromise,
+    subscribersPromise,
+    videosPromise
   ]);
+
+  const videoStats = videoStatsResult[0] || { totalVideos: 0, totalViews: 0 };
+  const videoIds = videos.map((v) => v._id);
+
+  let totalLikes = 0;
+  let totalComments = 0;
+
+  // 4. If creator has videos, fetch likes and comments precisely bounded by index mapping
+  if (videoIds.length > 0) {
+    const [likesCount, commentsCount] = await Promise.all([
+      Like.countDocuments({ video: { $in: videoIds } }),
+      Comment.countDocuments({ video: { $in: videoIds } })
+    ]);
+    totalLikes = likesCount;
+    totalComments = commentsCount;
+  }
 
   const result = {
-    totalVideos: stats?.totalVideos || 0,
-    totalViews: stats?.totalViews || 0,
-    totalSubscribers: subscriberStats?.count || 0,
-    totalLikes: stats?.totalLikes || 0,
-    totalComments: stats?.totalComments || 0
+    totalVideos: videoStats.totalVideos,
+    totalViews: videoStats.totalViews,
+    totalSubscribers,
+    totalLikes,
+    totalComments
   };
 
   return res

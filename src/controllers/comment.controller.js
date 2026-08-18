@@ -142,14 +142,23 @@ const getVideoComments = asynchandler(async (req, res) => {
   ];
 
   const commentAggregate = Comment.aggregate(pipeline);
-  const comments = await Comment.aggregatePaginate(commentAggregate, {
+  const paginatedResults = await Comment.aggregatePaginate(commentAggregate, {
     page,
     limit
   });
 
+  const meta = {
+    page: paginatedResults.page,
+    limit: paginatedResults.limit,
+    totalDocs: paginatedResults.totalDocs,
+    totalPages: paginatedResults.totalPages,
+    hasNextPage: paginatedResults.hasNextPage,
+    hasPrevPage: paginatedResults.hasPrevPage
+  };
+
   return res
     .status(200)
-    .json(new ApiResponse(200, comments, "Video comments retrieved successfully"));
+    .json(new ApiResponse(200, paginatedResults.docs, "Video comments retrieved successfully", meta));
 });
 
 const updateComment = asynchandler(async (req, res) => {

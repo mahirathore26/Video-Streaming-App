@@ -17,20 +17,14 @@ const likeSchema = new Schema({
     timestamps:true
 })
 
-// A like must point to exactly one supported target so a single document cannot
-// accidentally represent multiple likes at once.
-likeSchema.pre("validate", function(next) {
+likeSchema.pre("validate", function () {
     const targets = [this.video, this.comment].filter(Boolean);
 
     if (targets.length !== 1) {
-        return next(new Error("A like must belong to exactly one entity"));
+        throw new Error("A like must belong to exactly one entity");
     }
-
-    next();
 });
 
-// These partial unique indexes prevent duplicate likes per user per entity
-// while still allowing likes on different entity types.
 likeSchema.index(
     { likedBy: 1, video: 1 },
     {
@@ -46,8 +40,7 @@ likeSchema.index(
     }
 );
 
-// Query-heavy relationship fields get their own indexes for faster fan-out
-// reads such as listing likes for a video/comment or a user's liked content.
+
 likeSchema.index({ video: 1, createdAt: -1 });
 likeSchema.index({ comment: 1, createdAt: -1 });
 likeSchema.index({ likedBy: 1, createdAt: -1 });

@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Video } from "../models/video.model.js";
 import { deleteFromCloudinary, uploadonCloudinary } from "../utils/fileUpload.js";
+import { User } from "../models/user.model.js";
 import mongoose from "mongoose";
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -56,19 +57,26 @@ const uploadVideo = asynchandler(async (req, res) => {
     throw new ApiError(500, "Failed to upload thumbnail");
   }
 
-  const video = await Video.create({
-    title: title.trim(),
-    description: description.trim(),
-    videoFile: videoFileUrl,
-    videoPublicId: uploadedVideo.public_id,
-    thumbnail: thumbnailUrl,
-    thumbnailPublicId: uploadedThumbnail.public_id,
-    duration: uploadedVideo.duration||0,
-    owner: req.user._id
-  });
-
-  if (!video) {
-    throw new ApiError(500, "Video upload failed");
+  let video;
+  try {
+    video = await Video.create({
+      title: title.trim(),
+      description: description.trim(),
+      videoFile: videoFileUrl,
+      videoPublicId: uploadedVideo.public_id,
+      thumbnail: thumbnailUrl,
+      thumbnailPublicId: uploadedThumbnail.public_id,
+      duration: uploadedVideo.duration || 0,
+      owner: req.user._id
+    });
+  } catch (error) {
+    if (uploadedVideo?.public_id) {
+      await deleteFromCloudinary(uploadedVideo.public_id, "video");
+    }
+    if (uploadedThumbnail?.public_id) {
+      await deleteFromCloudinary(uploadedThumbnail.public_id, "image");
+    }
+    throw error;
   }
 
   return res
@@ -109,6 +117,15 @@ const getVideoById = asynchandler(async (req, res) => {
       new: true
     }
   ).populate("owner", "username fullname avatar");
+
+  if (req.user?._id) {
+    await User.findByIdAndUpdate(req.user._id, {
+      $pull: { watchHistory: updatedVideo._id }
+    });
+    await User.findByIdAndUpdate(req.user._id, {
+      $push: { watchHistory: updatedVideo._id }
+    });
+  }
 
   return res
     .status(200)
@@ -320,11 +337,20 @@ const getAllVideos = asynchandler(async (req, res) => {
     limit
   };
 
-  const videos = await Video.aggregatePaginate(videoAggregate, options);
+  const paginatedResults = await Video.aggregatePaginate(videoAggregate, options);
+
+  const meta = {
+    page: paginatedResults.page,
+    limit: paginatedResults.limit,
+    totalDocs: paginatedResults.totalDocs,
+    totalPages: paginatedResults.totalPages,
+    hasNextPage: paginatedResults.hasNextPage,
+    hasPrevPage: paginatedResults.hasPrevPage
+  };
 
   return res
     .status(200)
-    .json(new ApiResponse(200, videos, "Videos retrieved successfully"));
+    .json(new ApiResponse(200, paginatedResults.docs, "Videos retrieved successfully", meta));
 });
 
 export {

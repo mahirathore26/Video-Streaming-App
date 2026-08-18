@@ -23,8 +23,7 @@ const commentSchema = new Schema({
     timestamps:true
 })
 
-// Comments are most commonly fetched by video and often filtered or joined by
-// owner, so these indexes keep list and moderation queries efficient as data grows.
+
 commentSchema.index({ video: 1, createdAt: -1 });
 commentSchema.index({ owner: 1, createdAt: -1 });
 

@@ -37,7 +37,8 @@ const toggleLikeForEntity = async ({
   res
 }) => {
   const userId = getRequiredUserId(req);
-
+console.log("User ID:", userId);
+console.log("Entity ID:", entityId);
   validateObjectId(entityId, `Invalid ${entityLabel} id`);
 
   const entity = await model.findById(entityId).lean();
@@ -59,32 +60,54 @@ const toggleLikeForEntity = async ({
   });
 
   if (existingLike) {
+    const likeCount = await Like.countDocuments({ [entityField]: entityId });
     return res.status(200).json(
       new ApiResponse(
         200,
         {
-          liked: false
+          liked: false,
+          likeCount
         },
         `${entityLabel} unliked successfully`
       )
     );
   }
 
-  const like = await Like.create({
-    [entityField]: entityId,
-    likedBy: userId
-  });
+  try {
+    const like = await Like.create({
+      [entityField]: entityId,
+      likedBy: userId,
+    });
 
-  return res.status(201).json(
-    new ApiResponse(
-      201,
-      {
-        like,
-        liked: true
-      },
-      `${entityLabel} liked successfully`
-    )
-  );
+    const likeCount = await Like.countDocuments({ [entityField]: entityId });
+    return res.status(201).json(
+      new ApiResponse(
+        201,
+        {
+          like,
+          liked: true,
+          likeCount
+        },
+        `${entityLabel} liked successfully`
+      )
+    );
+  } catch (err) {
+    if (err.code === 11000) {
+      const likeCount = await Like.countDocuments({ [entityField]: entityId });
+      return res.status(200).json(
+        new ApiResponse(
+          200,
+          {
+            liked: true,
+            likeCount
+          },
+          `${entityLabel} already liked`
+        )
+      );
+    }
+    console.error("LIKE ERROR:", err);
+    throw err;
+  }
 };
 
 const getLikesForEntity = async ({
@@ -166,12 +189,17 @@ const getLikesForEntity = async ({
   const likes = likesResult[0]?.likes || [];
   const totalLikes = likesResult[0]?.metadata?.[0]?.totalLikes || 0;
 
+  const isLiked = req.user?._id
+    ? !!(await Like.exists({ [entityField]: entityId, likedBy: req.user._id }))
+    : false;
+
   return res.status(200).json(
     new ApiResponse(
       200,
       {
         totalLikes,
-        likes
+        likes,
+        isLiked
       },
       `${entityLabel} likes retrieved successfully`
     )
